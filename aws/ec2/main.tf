@@ -52,31 +52,7 @@ resource "aws_instance" "raxxo_ec2" {
   vpc_security_group_ids = [aws_security_group.raxxo_sg.id]
   key_name               = aws_key_pair.raxxo_key.key_name
   associate_public_ip_address = true
-  user_data = <<-EOF
-              #!/bin/bash
-              yum update -y
-              yum install -y yum-utils device-mapper-persistent-data lvm2
-              
-              #Agregar repo Docker 
-              yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-              
-              #Instalar aplicaciones 
-              yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
-              #habilitar Docker 
-              systemctl start docker
-              systemctl enable docker
-
-
-              # Verificar instalaciones
-              git --version
-              docker --version
-              docker compose --version
-
-              # Crear carpetas
-              mkdir -p /docker
-              mkdir -p /data
-              EOF
+  user_data_base64 = filebase64("installapps.sh")
 
   tags = {
     Name = "Raxxo-Ec2"
