@@ -51,7 +51,6 @@ sudo mkdir -p /data
 # Crear archivo de control para no volver a ejecutar
 touch "$FLAG_FILE"
 
-#!/bin/bash
 
 USUARIO="deployer"
 
