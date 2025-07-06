@@ -1,7 +1,7 @@
 #!/bin/bash
 cd aws 
 
-folders=("alb" "ec2" "vpc")  # Cambia estos nombres por tus carpetas reales
+folders=( "vpc" "ec2" )  # falta alb : Cambia estos nombres por tus carpetas reales
 
 for dir in "${folders[@]}"; do
   echo "=============================="

@@ -14,31 +14,59 @@ data "aws_ami" "amazon_linux" {
   }
 }
 
-# Obtener subnets de la VPC (usaremos la primera)
+# Obtener subnets de la VPC
 data "aws_subnets" "raxxo_subnets" {
   filter {
     name   = "vpc-id"
-    values = ["vpc-0005283161467b1c6"]
+    values = ["vpc-0f162a65890522d02"]
   }
 }
 
-# Par de llaves
+# Par de llaves SSH
 resource "aws_key_pair" "raxxo_key" {
- key_name   = "raxxo-key"
- public_key = file("~/.ssh/Raxxo/raxxokey.pub")
+  key_name   = "raxxo-key"
+  public_key = file("~/.ssh/Raxxo/raxxokey.pub") # <-- cambia si es necesario
 }
 
 # Security Group para SSH
 resource "aws_security_group" "raxxo_sg" {
   name        = "RaxxoAllowSSH"
   description = "Allow SSH from anywhere"
-  vpc_id      = "vpc-0005283161467b1c6"
+  vpc_id      = "vpc-0f162a65890522d02"
 
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # O puedes restringir por IP pública
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# Security Group para HTTP y HTTPS
+resource "aws_security_group" "raxxo_web_sg" {
+  name        = "RaxxoWebSG"
+  description = "Allow HTTP and HTTPS traffic"
+  vpc_id      = "vpc-0f162a65890522d02"
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -53,8 +81,11 @@ resource "aws_security_group" "raxxo_sg" {
 resource "aws_instance" "raxxo_ec2" {
   ami                         = data.aws_ami.amazon_linux.id
   instance_type               = "t2.micro"
-  subnet_id                   = data.aws_subnets.raxxo_subnets.ids[0] # Primera subnet
-  vpc_security_group_ids      = [aws_security_group.raxxo_sg.id]
+  subnet_id                   = data.aws_subnets.raxxo_subnets.ids[0]
+  vpc_security_group_ids      = [
+    aws_security_group.raxxo_sg.id,
+    aws_security_group.raxxo_web_sg.id
+  ]
   key_name                    = aws_key_pair.raxxo_key.key_name
   associate_public_ip_address = true
   user_data_base64            = filebase64("installapps.sh")
@@ -64,7 +95,7 @@ resource "aws_instance" "raxxo_ec2" {
   }
 }
 
-# Output opcional para ver la IP
+# Output: IP pública
 output "instance_public_ip" {
   value = aws_instance.raxxo_ec2.public_ip
 }

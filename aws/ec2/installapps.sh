@@ -27,14 +27,19 @@ sudo yum install -y git curl wget htop jq nano vim tree \
   net-tools iproute lsof unzip zip tar make tmux \
   openssh-clients fail2ban nmap
 
-echo "Creando carpeta para Docker Compose plugin..."
-mkdir -p ~/.docker/cli-plugins
+#!/bin/bash
 
-echo "Descargando Docker Compose V2..."
-curl -SL "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o ~/.docker/cli-plugins/docker-compose
+echo "Creando carpeta global para Docker Compose plugin..."
+sudo mkdir -p /usr/libexec/docker/cli-plugins
 
-echo "Dando permisos ejecutables..."
-chmod +x ~/.docker/cli-plugins/docker-compose
+echo "Descargando Docker Compose V2 a la ruta global..."
+sudo curl -SL "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/libexec/docker/cli-plugins/docker-compose
+
+echo "Dando permisos ejecutables al plugin..."
+sudo chmod +x /usr/libexec/docker/cli-plugins/docker-compose
+
+echo "Instalación completada. Verifica con: docker compose version"
+
 
 echo "Verificando instalación de Docker Compose..."
 docker compose version
@@ -44,9 +49,6 @@ echo "📊 [$(date)] Instalando ctop..."
 sudo curl -Lo /usr/local/bin/ctop https://github.com/bcicen/ctop/releases/latest/download/ctop-linux-amd64
 sudo chmod +x /usr/local/bin/ctop
 
-echo "📂 [$(date)] Creando directorios necesarios..."
-sudo mkdir -p /docker
-sudo mkdir -p /data
 
 # Crear archivo de control para no volver a ejecutar
 touch "$FLAG_FILE"
@@ -76,6 +78,42 @@ sudo usermod -aG docker $USUARIO
 echo "$USUARIO ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/$USUARIO
 
 echo "✅ Usuario '$USUARIO' creado con clave pública SSH, acceso a Git (SSH) y permisos Docker."
+
+echo "📂 [$(date)] Creando directorios necesarios..."
+sudo mkdir -p /docker
+sudo mkdir -p /data
+
+echo "🔧 [$(date)] Configurando permisos de carpetas..."
+
+sudo chown -R deployer:deployer /docker/
+sudo chown -R deployer:deployer /data/
+
+
+# RUTA donde tienes la clave
+echo "🔑 [$(date)] Configurando clave SSH para GitHub..."
+
+KEY_PATH="/home/deployer/.ssh/deployer"
+SSH_CONFIG="/home/deployer/.ssh/config"
+
+# 1. Asegurarse que la carpeta ~/.ssh exista
+echo "🔑 Creando carpeta .ssh si no existe..."
+mkdir -p /home/deployer/.ssh
+chmod 700 /home/deployer/.ssh
+
+
+# 2. Configurar SSH
+echo "⚙️ Configurando SSH para GitHub..."
+cat >> "$SSH_CONFIG" <<EOF
+
+Host github.com
+  HostName github.com
+  User git
+  IdentityFile $KEY_PATH
+  IdentitiesOnly yes
+EOF
+
+# 3. Agregar GitHub a known_hosts (evitar advertencia)
+ssh-keyscan github.com >> ~/.ssh/known_hosts
 
 # Crear archivo de control para no volver a ejecutar
 sudo touch /var/log/user_setup.done 
